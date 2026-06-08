@@ -1,0 +1,151 @@
+{
+  "name": "docs_and_tests",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "docs_and_tests"
+      },
+      "id": "a5b6c7d8-e9fa-0123-def1-234567890015",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "code": "// verify-hmac snippet injected at deploy time\nreturn {\n  statusCode: 200,\n  body: $input.all()\n};"
+      },
+      "id": "b6c7d8e9-fa01-2345-f123-456789012345",
+      "name": "verifyHmac",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [470, 300]
+    },
+    {
+      "parameters": {
+        "code": "const data = $input.all();\nreturn {\n  payload: data,\n  validated: true\n};"
+      },
+      "id": "c7d8e9fa-0123-4567-f123-456789012346",
+      "name": "parseAndValidate",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [690, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={{$env.GEMINI_API_KEY}}",
+        "method": "POST",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "contents": [
+            {
+              "parts": [
+                {
+                  "text": "Generate documentation and tests for: {{$json.payload}}"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "id": "d8e9fa01-2345-6789-f123-456789012347",
+      "name": "AI Agent",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [910, 300]
+    },
+    {
+      "parameters": {
+        "code": "const response = $input.all();\nreturn {\n  result: response.candidates?.[0]?.content?.parts?.[0]?.text || '',\n  processed: true\n};"
+      },
+      "id": "e9fa0123-4567-89ab-f123-456789012348",
+      "name": "postProcess",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1130, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{$env.APP_BASE_URL}}/api/public/n8n/callback",
+        "method": "POST",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "workflowId": "docs_and_tests",
+          "result": "={{$json.result}}",
+          "status": "completed"
+        }
+      },
+      "id": "fa01234567-89ab-cdef-f123-456789012349",
+      "name": "HTTP Request callback",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1350, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "verifyHmac",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "verifyHmac": {
+      "main": [
+        [
+          {
+            "node": "parseAndValidate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "parseAndValidate": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "postProcess",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "postProcess": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request callback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionTimeout": 90000,
+    "errorWorkflow": "_error_handler"
+  }
+}

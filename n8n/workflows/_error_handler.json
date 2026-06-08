@@ -1,0 +1,71 @@
+{
+  "name": "_error_handler",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "a8b9cadb-ecfd-0123-f123-345678901018",
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "code": "const error = $input.all();\nreturn {\n  error: {\n    message: error.message || 'Unknown error',\n    stack: error.stack || '',\n    timestamp: new Date().toISOString()\n  },\n  formatted: true\n};"
+      },
+      "id": "b9cadbec-fd01-2345-f123-456789012348",
+      "name": "formatError",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [470, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{$env.APP_BASE_URL}}/api/public/n8n/callback",
+        "method": "POST",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "kind": "log",
+          "workflowId": "_error_handler",
+          "error": "={{$json.error}}",
+          "status": "failed"
+        }
+      },
+      "id": "cadbecfd-0123-4567-f123-456789012349",
+      "name": "HTTP Request callback",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [690, 300]
+    }
+  ],
+  "connections": {
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "formatError",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "formatError": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request callback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionTimeout": 90000
+  }
+}
